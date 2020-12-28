@@ -25,7 +25,6 @@ public class Board extends JPanel
 	private static final int SCORE_HEIGHT = 18;
 	private static final int BOARD_WIDTH = 40 * DOT_SIZE;
 	private static final int BOARD_HEIGHT = 40 * DOT_SIZE;
-	private static final int MAX_DOTS = 10;
 	private static final int RAND_POS_X = BOARD_WIDTH / DOT_SIZE - 1;
 	private static final int RAND_POS_Y = BOARD_HEIGHT / DOT_SIZE - 1;
 	private static final int DELAY = 140;
@@ -35,15 +34,12 @@ public class Board extends JPanel
 	private final Image apple;
 	private final Image dot;
 	
-	private final Fifo fifo = new Fifo(MAX_DOTS);
+	private Fifo fifo;
 	private final GameState gameState = new GameState();
-	
-	private boolean isInGame = true;
-	private int eats = 0;
 	
 	private Point applePos;
 	
-	private Direction direction = Direction.RIGHT;
+	private Direction direction;
 
 	
 	public Board(Runnable disposeRunnable)
@@ -63,8 +59,7 @@ public class Board extends JPanel
 		ImageIcon iia = new ImageIcon("resources/apple.png");
 		apple = iia.getImage();
 		
-		fifo.add(newHeadLocation());
-		applePos = newAppleLocation();
+		putInGame();
 		timer = new Timer(DELAY, actionListener);
 		timer.start();
 	}
@@ -80,26 +75,24 @@ public class Board extends JPanel
 	
 	void doDrawing(Graphics g)
 	{
-		if(isInGame) 
+		if(gameState.isInGame() && !gameState.isGameCompleted()) 
 		{	
 			Iterator<Point> iter = fifo.getIterator();
 			Point p = iter.next();
 			drawOnBoard(g, applePos, apple);
 			drawOnBoard(g, p, head);
-			//g.drawImage(apple, applePos.getX(), applePos.getY(), this);
-			//g.drawImage(head, p.getX(), p.getY(), this);
 			while(iter.hasNext())
 			{
 				p = iter.next();
-				//g.drawImage(dot, p.getX(), p.getY(), this);
 				drawOnBoard(g, p, dot);
 			}
 		}
 		else gameOver(g);
 		g.setColor(Color.white);
 		g.fillRect(0, 0, BOARD_WIDTH, SCORE_HEIGHT);
-		String msg = "Length " + fifo.getCurrentSize() + "/" + fifo.getMaxSize() + ", Eats " + eats 
-				+ "/" + gameState.getRequiredEats() + ", Level 1/" + gameState.getNumOfLevels() + ", Cycle 1/" + gameState.getMaxCycles();
+		String msg = "Length " + fifo.getCurrentSize() + "/" + fifo.getMaxSize() + ", Eats " + gameState.getEats() 
+				+ "/" + gameState.getRequiredEats() + ", Level " + gameState.getLevel() + "/" + gameState.getNumOfLevels() 
+				+ ", Cycle " + gameState.getCycle() + "/" + gameState.getMaxCycles();
 		g.setColor(Color.black);
 		Font font = new Font("Hellvetica", Font.BOLD, 14);
 		g.setFont(font);
@@ -136,12 +129,30 @@ public class Board extends JPanel
 	}
 	
 	
+	void putInGame()
+	{
+		gameState.putInGame();
+		fifo = new Fifo(gameState.getFullSnakeLength());
+		fifo.add(newHeadLocation());
+		applePos = newAppleLocation();
+		direction = Direction.RIGHT;
+	}
+	
 	Point newHeadLocation()
 	{
 		int headX = 2 * DOT_SIZE;
 		int headY = 2 * DOT_SIZE;
 		
 		return new Point(headX, headY);
+	}
+	
+	
+	/**
+	 * Called once every time a snake dies
+	 */
+	void snakeDied()
+	{
+		gameState.snakeDied();
 	}
 	
 	
@@ -161,14 +172,9 @@ public class Board extends JPanel
 				if((key == KeyEvent.VK_ESCAPE)) disposeRunnable.run();
 				if((key == KeyEvent.VK_SPACE))
 				{
-					if(!isInGame)
+					if(!gameState.isInGame())
 					{
-						direction = Direction.RIGHT;
-						isInGame = true;
-						fifo.clear();
-						fifo.add(newHeadLocation());
-						applePos = newAppleLocation();
-						eats = 0;
+						putInGame();
 					}
 				}
 			}
@@ -176,20 +182,11 @@ public class Board extends JPanel
 	}
 	
 	
-	/**
-	 * Called once every time a snake dies
-	 */
-	void snakeDied()
-	{
-		isInGame = false;
-	}
-	
-	
 	ActionListener constructActionListener()
 	{
 		return e -> 
 		{
-			if(isInGame)
+			if(gameState.isInGame())
 			{
 				int headX = fifo.getFirst().getX();
 				int headY = fifo.getFirst().getY();
@@ -214,9 +211,14 @@ public class Board extends JPanel
 				if(fifo.getFirst().equals(applePos)) 
 				{
 					applePos = newAppleLocation();
-					++eats;
+					gameState.eat();
+					if(gameState.isLevelComplete())
+					{
+						gameState.levelUp();
+						putInGame();
+					}
 				}
-				if(headX >= BOARD_WIDTH || headX < 0 || headY >= BOARD_HEIGHT || headY < 0 || isCollision)
+				else if(headX >= BOARD_WIDTH || headX < 0 || headY >= BOARD_HEIGHT || headY < 0 || isCollision)
 				{
 					snakeDied();
 				}

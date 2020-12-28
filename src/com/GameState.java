@@ -7,14 +7,16 @@ package snake;
  */
 public class GameState 
 {
-	private boolean isGameStarted = false;
+	private boolean isInGame;
+	private boolean isGameCompleted = false;
 	private int level = 0;
 	private int cycle = 0;
 	private int lives = 5;
+	private int eats = 0;
 	private static final int MAX_CYCLES = 2;
 	private static final int[] numOfLevels = {2, 3};
-	private static final int[] requiredEats = {15, 25};
-	private static final int[] fullSnakeLength = {10, 20};
+	private static final int[] requiredEats = {5, 7};
+	private static final int[] fullSnakeLength = {4, 5};
 
 	
 	/**
@@ -23,24 +25,6 @@ public class GameState
 	public GameState() 
 	{
 		
-	}
-	
-	
-	/**
-	 * must be called upon starting the game 
-	 */
-	public void startGame()
-	{
-		isGameStarted = true;
-	}
-	
-	
-	/**
-	 * @return true if the game has been started
-	 */
-	public boolean isGameStarted()
-	{
-		return isGameStarted;
 	}
 	
 	
@@ -64,6 +48,15 @@ public class GameState
 	
 	
 	/**
+	 * @return true if game play is active
+	 */
+	public boolean isInGame()
+	{
+		return isInGame;
+	}
+	
+	
+	/**
 	 * @return The number of apples which must be eaten
 	 * to complete this level
 	 */
@@ -73,7 +66,9 @@ public class GameState
 	}
 	
 	
-	
+	/**
+	 * @return The maximum snake length for this cycle
+	 */
 	public int getFullSnakeLength()
 	{
 		return fullSnakeLength[cycle];
@@ -89,6 +84,35 @@ public class GameState
 	}
 	
 	
+	public int getLevel()
+	{
+		return level + 1;
+	}
+	
+	
+	public int getCycle()
+	{
+		return cycle + 1;
+	}
+	
+	public int getEats()
+	{
+		return eats;
+	}
+	
+	
+	public void eat()
+	{
+		++eats;
+	}
+	
+	
+	public void snakeDied()
+	{
+		--lives;
+		isInGame = false;
+	}
+	
 	public int getMaxCycles()
 	{
 		return MAX_CYCLES;
@@ -97,14 +121,36 @@ public class GameState
 	
 	public boolean isGameCompleted()
 	{
-		return cycle == MAX_CYCLES;
+		return isGameCompleted;
 	}
 	
 	
 	public void levelUp()
 	{
 		++level;
-		if(level == numOfLevels[cycle]) ++cycle;
-		
+		if(level == numOfLevels[cycle]) 
+		{
+			++cycle;
+			level = 0;
+		}
+		if(cycle == MAX_CYCLES)
+		{
+			isInGame = false;
+			isGameCompleted = true;
+			level = numOfLevels[--cycle] - 1;
+		}
+	}
+	
+	
+	public boolean isLevelComplete()
+	{
+		return eats == requiredEats[cycle];
+	}
+	
+	
+	public void putInGame()
+	{
+		eats = 0;
+		isInGame = true;
 	}
 }
