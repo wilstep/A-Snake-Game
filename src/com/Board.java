@@ -1,4 +1,4 @@
-package com.zetcode;
+package snake;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -6,240 +6,222 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Iterator;
+
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
-public class Board extends JPanel implements ActionListener {
+public class Board extends JPanel
+{
+	private static final long serialVersionUID = 1L;
+	private final ActionListener actionListener;
+	private final Runnable disposeRunnable;
+	
+	private static final int DOT_SIZE = 10;
+	private static final int SCORE_HEIGHT = 18;
+	private static final int BOARD_WIDTH = 40 * DOT_SIZE;
+	private static final int BOARD_HEIGHT = 40 * DOT_SIZE;
+	private static final int MAX_DOTS = 10;
+	private static final int RAND_POS_X = BOARD_WIDTH / DOT_SIZE - 1;
+	private static final int RAND_POS_Y = BOARD_HEIGHT / DOT_SIZE - 1;
+	private static final int DELAY = 140;
+	
+	private final Timer timer;
+	private final Image head;
+	private final Image apple;
+	private final Image dot;
+	
+	private final Fifo fifo = new Fifo(MAX_DOTS);
+	private final GameState gameState = new GameState();
+	
+	private boolean isInGame = true;
+	private int eats = 0;
+	
+	private Point applePos;
+	
+	private Direction direction = Direction.RIGHT;
 
-    private final int B_WIDTH = 300;
-    private final int B_HEIGHT = 300;
-    private final int DOT_SIZE = 10;
-    private final int ALL_DOTS = 900;
-    private final int RAND_POS = 29;
-    private final int DELAY = 140;
-
-    private final int x[] = new int[ALL_DOTS];
-    private final int y[] = new int[ALL_DOTS];
-
-    private int dots;
-    private int apple_x;
-    private int apple_y;
-
-    private boolean leftDirection = false;
-    private boolean rightDirection = true;
-    private boolean upDirection = false;
-    private boolean downDirection = false;
-    private boolean inGame = true;
-
-    private Timer timer;
-    private Image ball;
-    private Image apple;
-    private Image head;
-
-    public Board() {
-        
-        initBoard();
-    }
-    
-    private void initBoard() {
-
-        addKeyListener(new TAdapter());
-        setBackground(Color.black);
-        setFocusable(true);
-
-        setPreferredSize(new Dimension(B_WIDTH, B_HEIGHT));
-        loadImages();
-        initGame();
-    }
-
-    private void loadImages() {
-
-        ImageIcon iid = new ImageIcon("src/resources/dot.png");
-        ball = iid.getImage();
-
-        ImageIcon iia = new ImageIcon("src/resources/apple.png");
-        apple = iia.getImage();
-
-        ImageIcon iih = new ImageIcon("src/resources/head.png");
-        head = iih.getImage();
-    }
-
-    private void initGame() {
-
-        dots = 3;
-
-        for (int z = 0; z < dots; z++) {
-            x[z] = 50 - z * 10;
-            y[z] = 50;
-        }
-        
-        locateApple();
-
-        timer = new Timer(DELAY, this);
-        timer.start();
-    }
-
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-
-        doDrawing(g);
-    }
-    
-    private void doDrawing(Graphics g) {
-        
-        if (inGame) {
-
-            g.drawImage(apple, apple_x, apple_y, this);
-
-            for (int z = 0; z < dots; z++) {
-                if (z == 0) {
-                    g.drawImage(head, x[z], y[z], this);
-                } else {
-                    g.drawImage(ball, x[z], y[z], this);
-                }
-            }
-
-            Toolkit.getDefaultToolkit().sync();
-
-        } else {
-
-            gameOver(g);
-        }        
-    }
-
-    private void gameOver(Graphics g) {
-        
-        String msg = "Game Over";
-        Font small = new Font("Helvetica", Font.BOLD, 14);
-        FontMetrics metr = getFontMetrics(small);
-
-        g.setColor(Color.white);
-        g.setFont(small);
-        g.drawString(msg, (B_WIDTH - metr.stringWidth(msg)) / 2, B_HEIGHT / 2);
-    }
-
-    private void checkApple() {
-
-        if ((x[0] == apple_x) && (y[0] == apple_y)) {
-
-            dots++;
-            locateApple();
-        }
-    }
-
-    private void move() {
-
-        for (int z = dots; z > 0; z--) {
-            x[z] = x[(z - 1)];
-            y[z] = y[(z - 1)];
-        }
-
-        if (leftDirection) {
-            x[0] -= DOT_SIZE;
-        }
-
-        if (rightDirection) {
-            x[0] += DOT_SIZE;
-        }
-
-        if (upDirection) {
-            y[0] -= DOT_SIZE;
-        }
-
-        if (downDirection) {
-            y[0] += DOT_SIZE;
-        }
-    }
-
-    private void checkCollision() {
-
-        for (int z = dots; z > 0; z--) {
-
-            if ((z > 4) && (x[0] == x[z]) && (y[0] == y[z])) {
-                inGame = false;
-            }
-        }
-
-        if (y[0] >= B_HEIGHT) {
-            inGame = false;
-        }
-
-        if (y[0] < 0) {
-            inGame = false;
-        }
-
-        if (x[0] >= B_WIDTH) {
-            inGame = false;
-        }
-
-        if (x[0] < 0) {
-            inGame = false;
-        }
-        
-        if (!inGame) {
-            timer.stop();
-        }
-    }
-
-    private void locateApple() {
-
-        int r = (int) (Math.random() * RAND_POS);
-        apple_x = ((r * DOT_SIZE));
-
-        r = (int) (Math.random() * RAND_POS);
-        apple_y = ((r * DOT_SIZE));
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-
-        if (inGame) {
-
-            checkApple();
-            checkCollision();
-            move();
-        }
-
-        repaint();
-    }
-
-    private class TAdapter extends KeyAdapter {
-
-        @Override
-        public void keyPressed(KeyEvent e) {
-
-            int key = e.getKeyCode();
-
-            if ((key == KeyEvent.VK_LEFT) && (!rightDirection)) {
-                leftDirection = true;
-                upDirection = false;
-                downDirection = false;
-            }
-
-            if ((key == KeyEvent.VK_RIGHT) && (!leftDirection)) {
-                rightDirection = true;
-                upDirection = false;
-                downDirection = false;
-            }
-
-            if ((key == KeyEvent.VK_UP) && (!downDirection)) {
-                upDirection = true;
-                rightDirection = false;
-                leftDirection = false;
-            }
-
-            if ((key == KeyEvent.VK_DOWN) && (!upDirection)) {
-                downDirection = true;
-                rightDirection = false;
-                leftDirection = false;
-            }
-        }
-    }
+	
+	public Board(Runnable disposeRunnable)
+	{
+		actionListener = constructActionListener();
+		this.disposeRunnable = disposeRunnable;
+		addKeyListener(constructKeyAdapter());
+		setBackground(Color.black);
+		setFocusable(true);
+		
+		setPreferredSize(new Dimension(BOARD_WIDTH, BOARD_HEIGHT + SCORE_HEIGHT));
+		
+		ImageIcon iih = new ImageIcon("resources/head.png");
+		head = iih.getImage();
+		ImageIcon iid = new ImageIcon("resources/dot.png");
+		dot = iid.getImage();
+		ImageIcon iia = new ImageIcon("resources/apple.png");
+		apple = iia.getImage();
+		
+		fifo.add(newHeadLocation());
+		applePos = newAppleLocation();
+		timer = new Timer(DELAY, actionListener);
+		timer.start();
+	}
+	
+	
+	@Override
+	public void paintComponent(Graphics g)
+	{
+		super.paintComponent(g);
+		doDrawing(g);
+	}
+	
+	
+	void doDrawing(Graphics g)
+	{
+		if(isInGame) 
+		{	
+			Iterator<Point> iter = fifo.getIterator();
+			Point p = iter.next();
+			drawOnBoard(g, applePos, apple);
+			drawOnBoard(g, p, head);
+			//g.drawImage(apple, applePos.getX(), applePos.getY(), this);
+			//g.drawImage(head, p.getX(), p.getY(), this);
+			while(iter.hasNext())
+			{
+				p = iter.next();
+				//g.drawImage(dot, p.getX(), p.getY(), this);
+				drawOnBoard(g, p, dot);
+			}
+		}
+		else gameOver(g);
+		g.setColor(Color.white);
+		g.fillRect(0, 0, BOARD_WIDTH, SCORE_HEIGHT);
+		String msg = "Length " + fifo.getCurrentSize() + "/" + fifo.getMaxSize() + ", Eats " + eats 
+				+ "/" + gameState.getRequiredEats() + ", Level 1/" + gameState.getNumOfLevels() + ", Cycle 1/" + gameState.getMaxCycles();
+		g.setColor(Color.black);
+		Font font = new Font("Hellvetica", Font.BOLD, 14);
+		g.setFont(font);
+		g.drawString(msg, 2, 14);
+	}
+	
+	
+	void drawOnBoard(Graphics g, Point p, Image image)
+	{
+		g.drawImage(image, p.getX(), p.getY() + SCORE_HEIGHT, this);
+	}
+	
+	
+	void gameOver(Graphics g)
+	{
+		String msg = "Game Over";
+		Font font = new Font("Hellvetica", Font.BOLD, 14);
+		FontMetrics metr = getFontMetrics(font);
+		
+		g.setColor(Color.white);
+		g.setFont(font);
+		g.drawString(msg, (BOARD_WIDTH - metr.stringWidth(msg)) / 2, BOARD_HEIGHT / 2);
+	}
+	
+	
+	Point newAppleLocation()
+	{
+		int appleX = ((int) (Math.random() * RAND_POS_X)) * DOT_SIZE;
+		int appleY = ((int) (Math.random() * RAND_POS_Y)) * DOT_SIZE;
+		Point apple = new Point(appleX, appleY);
+		
+		if(fifo.isInList(apple)) return newAppleLocation();
+		return apple;
+	}
+	
+	
+	Point newHeadLocation()
+	{
+		int headX = 2 * DOT_SIZE;
+		int headY = 2 * DOT_SIZE;
+		
+		return new Point(headX, headY);
+	}
+	
+	
+	KeyAdapter constructKeyAdapter()
+	{
+		return new KeyAdapter() 
+		{
+			@Override
+			public void keyPressed(KeyEvent e)
+			{
+				int key = e.getKeyCode();
+				
+				if((key == KeyEvent.VK_LEFT) && !direction.isRight()) direction = Direction.LEFT;
+				if((key == KeyEvent.VK_RIGHT) && !direction.isLeft()) direction = Direction.RIGHT;
+				if((key == KeyEvent.VK_UP) && !direction.isDown()) direction = Direction.UP;
+				if((key == KeyEvent.VK_DOWN) && !direction.isUp()) direction = Direction.DOWN;
+				if((key == KeyEvent.VK_ESCAPE)) disposeRunnable.run();
+				if((key == KeyEvent.VK_SPACE))
+				{
+					if(!isInGame)
+					{
+						direction = Direction.RIGHT;
+						isInGame = true;
+						fifo.clear();
+						fifo.add(newHeadLocation());
+						applePos = newAppleLocation();
+						eats = 0;
+					}
+				}
+			}
+		};
+	}
+	
+	
+	/**
+	 * Called once every time a snake dies
+	 */
+	void snakeDied()
+	{
+		isInGame = false;
+	}
+	
+	
+	ActionListener constructActionListener()
+	{
+		return e -> 
+		{
+			if(isInGame)
+			{
+				int headX = fifo.getFirst().getX();
+				int headY = fifo.getFirst().getY();
+				switch(direction)
+				{
+					case RIGHT:
+						headX += DOT_SIZE;
+						break;
+					case LEFT:
+						headX -= DOT_SIZE;
+						break;
+					case UP:
+						headY -= DOT_SIZE;
+						break;
+					case DOWN:
+						headY += DOT_SIZE;
+						break;
+				}
+				var point = new Point(headX, headY);
+				if(point.equals(applePos)) fifo.grow();
+				boolean isCollision = fifo.add(point);
+				if(fifo.getFirst().equals(applePos)) 
+				{
+					applePos = newAppleLocation();
+					++eats;
+				}
+				if(headX >= BOARD_WIDTH || headX < 0 || headY >= BOARD_HEIGHT || headY < 0 || isCollision)
+				{
+					snakeDied();
+				}
+				repaint();
+			}
+		};
+	}
 }
