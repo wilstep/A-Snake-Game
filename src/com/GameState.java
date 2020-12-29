@@ -13,10 +13,11 @@ public class GameState
 	private int cycle = 0;
 	private int lives = 5;
 	private int eats = 0;
+	private int snakeLength = 1;
 	private static final int MAX_CYCLES = 2;
 	private static final int[] numOfLevels = {2, 3};
-	private static final int[] requiredEats = {5, 7};
-	private static final int[] fullSnakeLength = {4, 5};
+	private static final int[] requiredEats = {2, 2};
+	private static final int[] fullSnakeLength = {2, 2};
 
 	
 	/**
@@ -39,11 +40,11 @@ public class GameState
 	
 	
 	/**
-	 * @return true if the game is still alive
+	 * @return true if the game is over
 	 */
-	public boolean isAlive()
+	public boolean isGameOver()
 	{
-		return lives > 0;
+		return lives == 0;
 	}
 	
 	
@@ -95,6 +96,13 @@ public class GameState
 		return cycle + 1;
 	}
 	
+	
+	public int getSnakeLength()
+	{
+		return snakeLength;
+	}
+	
+	
 	public int getEats()
 	{
 		return eats;
@@ -103,6 +111,7 @@ public class GameState
 	
 	public void eat()
 	{
+		if(snakeLength < fullSnakeLength[cycle]) ++snakeLength;
 		++eats;
 	}
 	
@@ -135,10 +144,21 @@ public class GameState
 		}
 		if(cycle == MAX_CYCLES)
 		{
-			isInGame = false;
 			isGameCompleted = true;
 			level = numOfLevels[--cycle] - 1;
 		}
+		else
+		{
+			snakeLength = 1;
+			eats = 0;
+		}
+		isInGame = false;
+	}
+	
+	
+	public boolean isGameOneOffComplete()
+	{
+		return (eats == requiredEats[cycle] - 1) && (cycle == MAX_CYCLES - 1) && (level == numOfLevels[cycle] - 1);
 	}
 	
 	
@@ -150,7 +170,6 @@ public class GameState
 	
 	public void putInGame()
 	{
-		eats = 0;
 		isInGame = true;
 	}
 }

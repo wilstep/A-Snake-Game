@@ -59,7 +59,6 @@ public class Board extends JPanel
 		ImageIcon iia = new ImageIcon("resources/apple.png");
 		apple = iia.getImage();
 		
-		putInGame();
 		timer = new Timer(DELAY, actionListener);
 		timer.start();
 	}
@@ -75,7 +74,11 @@ public class Board extends JPanel
 	
 	void doDrawing(Graphics g)
 	{
-		if(gameState.isInGame() && !gameState.isGameCompleted()) 
+		if(gameState.isGameCompleted())
+		{
+			gameCompletedScreen(g);
+		}
+		else if(gameState.isInGame()) 
 		{	
 			Iterator<Point> iter = fifo.getIterator();
 			Point p = iter.next();
@@ -87,10 +90,17 @@ public class Board extends JPanel
 				drawOnBoard(g, p, dot);
 			}
 		}
-		else gameOver(g);
+		else 
+		{ 
+			if(gameState.isGameOver()) gameOverScreen(g);
+			else 
+			{
+				gameStartScreen(g);
+			}
+		}
 		g.setColor(Color.white);
 		g.fillRect(0, 0, BOARD_WIDTH, SCORE_HEIGHT);
-		String msg = "Length " + fifo.getCurrentSize() + "/" + fifo.getMaxSize() + ", Eats " + gameState.getEats() 
+		String msg = "Length " + gameState.getSnakeLength() + "/" + gameState.getFullSnakeLength() + ", Eats " + gameState.getEats() 
 				+ "/" + gameState.getRequiredEats() + ", Level " + gameState.getLevel() + "/" + gameState.getNumOfLevels() 
 				+ ", Cycle " + gameState.getCycle() + "/" + gameState.getMaxCycles();
 		g.setColor(Color.black);
@@ -106,15 +116,35 @@ public class Board extends JPanel
 	}
 	
 	
-	void gameOver(Graphics g)
+	void gameOverScreen(Graphics g)
 	{
 		String msg = "Game Over";
+		gameMessage(msg, g);
+	}
+	
+	
+	void gameCompletedScreen(Graphics g)
+	{		
+		String msg = "Congratulations: Game Completed";
+		gameMessage(msg, g);
+	}
+	
+	
+	void gameStartScreen(Graphics g)
+	{
+		String msg = "Press spacebar to start";
+		gameMessage(msg, g);
+	}
+	
+	
+	void gameMessage(String message, Graphics g)
+	{
 		Font font = new Font("Hellvetica", Font.BOLD, 14);
 		FontMetrics metr = getFontMetrics(font);
 		
 		g.setColor(Color.white);
 		g.setFont(font);
-		g.drawString(msg, (BOARD_WIDTH - metr.stringWidth(msg)) / 2, BOARD_HEIGHT / 2);
+		g.drawString(message, (BOARD_WIDTH - metr.stringWidth(message)) / 2, BOARD_HEIGHT / 2);		
 	}
 	
 	
@@ -131,11 +161,11 @@ public class Board extends JPanel
 	
 	void putInGame()
 	{
-		gameState.putInGame();
 		fifo = new Fifo(gameState.getFullSnakeLength());
 		fifo.add(newHeadLocation());
 		applePos = newAppleLocation();
 		direction = Direction.RIGHT;
+		gameState.putInGame();
 	}
 	
 	Point newHeadLocation()
@@ -206,24 +236,42 @@ public class Board extends JPanel
 						break;
 				}
 				var point = new Point(headX, headY);
-				if(point.equals(applePos)) fifo.grow();
-				boolean isCollision = fifo.add(point);
-				if(fifo.getFirst().equals(applePos)) 
+				if(point.equals(applePos)) 
 				{
-					applePos = newAppleLocation();
-					gameState.eat();
-					if(gameState.isLevelComplete())
+					if(gameState.isGameOneOffComplete())
 					{
+						gameState.eat();
 						gameState.levelUp();
-						putInGame();
 					}
+					else fifo.grow();
 				}
-				else if(headX >= BOARD_WIDTH || headX < 0 || headY >= BOARD_HEIGHT || headY < 0 || isCollision)
+				if(!gameState.isGameCompleted())
 				{
-					snakeDied();
+					boolean isCollision = fifo.add(point);
+					if(fifo.getFirst().equals(applePos)) 
+					{
+						applePos = newAppleLocation();
+						gameState.eat();
+						if(gameState.isLevelComplete())
+						{
+							gameState.levelUp();
+						}
+					}
+					else if(headX >= BOARD_WIDTH || headX < 0 || headY >= BOARD_HEIGHT || headY < 0 || isCollision)
+					{
+						snakeDied();
+					}
 				}
 				repaint();
 			}
+			else // not in game
+			{
+				if(!gameState.isGameCompleted())
+				{
+					
+				}
+			}
+					
 		};
 	}
 }
